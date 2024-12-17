@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Upload and Score Calculation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Assignments and Score Calculation</h1>
+
+    <div id="tasks-container"></div>
+    <h2>Score: <span id="score">0</span></h2>
+
+    <script>
+        // Fetch tasks from the backend
+        async function fetchTasks() {
+            try {
+                const response = await fetch('http://localhost:3000/tasks');
+                if (!response.ok) throw new Error('Failed to fetch tasks');
+
+                const tasks = await response.json();
+                const tasksContainer = document.getElementById('tasks-container');
+                tasksContainer.innerHTML = ''; // Clear existing tasks
+
+                tasks.forEach(task => {
+                    // Create elements for each task
+                    const taskDiv = document.createElement('div');
+                    taskDiv.innerHTML = `
+                        <h3>${task.name}</h3>
+                        <p>Status: ${task.completed ? 'Completed' : 'Pending'}</p>
+                        <input type="file" id="file-input-${task.id}" ${task.completed ? 'disabled' : ''} />
+                        <button onclick="uploadFile(${task.id})" ${task.completed ? 'disabled' : ''}>Upload File</button>
+                    `;
+                    tasksContainer.appendChild(taskDiv);
+                });
+            } catch (error) {
+                console.error('Error fetching tasks:', error);
+            }
+        }
+
+        // Upload file for a specific task
+        async function uploadFile(taskId) {
+            const fileInput = document.getElementById(`file-input-${taskId}`);
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please choose a file to upload.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`http://localhost:3000/tasks/${taskId}/upload`, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) throw new Error('File upload failed');
+
+                const data = await response.json();
+
+                // Update task status and score
+                alert(data.message);
+                fetchTasks();  // Re-fetch tasks and update UI
+                document.getElementById('score').innerText = data.score;  // Update the score
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                alert('File upload failed');
+            }
+        }
+
+        // Fetch tasks on page load
+        fetchTasks();
+    </script>
+</body>
+</html>
